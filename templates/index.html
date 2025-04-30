@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Pi Control</title></head>
+<body>
+  <h1>Live Camera</h1>
+  <img src="/stream" width="648" height="486" />
+  <h2>Controls</h2>
+  <div>
+    Slider 1: <input id="s1" type="range" min="0" max="100" value="50" /> <span id="v1">50</span>
+  </div>
+  <div>
+    Slider 2: <input id="s2" type="range" min="0" max="100" value="50" /> <span id="v2">50</span>
+  </div>
+<script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  socket.on('state', data => {
+    ['s1','s2'].forEach((id,i) => {
+      const key = 'slider'+(i+1);
+      document.getElementById(id).value = data[key];
+      document.getElementById('v'+(i+1)).innerText = data[key];
+    });
+  });
+  ['s1','s2'].forEach((id,i) => {
+    const key = 'slider'+(i+1);
+    document.getElementById(id).addEventListener('change', e => {
+      const val = e.target.value;
+      document.getElementById('v'+(i+1)).innerText = val;
+      socket.emit('update', {[key]: Number(val)});
+    });
+  });
+</script>
+</body>
+</html>

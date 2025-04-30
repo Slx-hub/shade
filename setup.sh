@@ -1,3 +1,4 @@
 sudo apt update
 sudo apt install python3-pip python3-opencv libatlas-base-dev
-pip3 install flask flask-socketio eventlet
+sudo apt install python3-flask python3-flask-socketio python3-eventlet
+sudo apt install python3-libcamera
