@@ -6,7 +6,7 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 # Shared slider values
-data = {'slider1': 50, 'slider2': 50}
+data = {'xMin': 10, 'xMax': 314, 'yMin': 10, 'yMax': 233}
 
 @app.route('/')
 def index():

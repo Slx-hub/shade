@@ -1,34 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Pi Control</title></head>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Live Stream with Adjustable Border</title>
+  <style>
+    /* Container for relative positioning */
+    #video-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* The MJPEG stream itself */
+    #stream {
+      display: block;
+      width: 648px;   /* match your 324×243 stream */
+      height: 486px;
+    }
+
+    /* Semi-transparent red border overlay */
+    #horizontal-overlay {
+      position: absolute;
+      top: 0px;
+      height: 486px;
+      background-color: rgba(255, 0, 0, 0.3);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    /* Semi-transparent red border overlay */
+    #top-overlay {
+      position: absolute;
+      top: 0px;
+      width: 648px;
+      background-color: rgba(255, 0, 0, 0.3);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    /* Semi-transparent red border overlay */
+    #bottom-overlay {
+      position: absolute;
+      width: 648px;
+      background-color: rgba(255, 0, 0, 0.3);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    /* Bottom slider wrapper */
+    #controls-bottom {
+      position: relative;
+      width: 648px;
+      left: -2px;
+    }
+    #controls-bottom input {
+      width: 100%;
+    }
+
+    /* Right slider wrapper */
+    #controls-right {
+      position: absolute;
+      top: -38px;
+      right: -486px;         /* adjust so the rotated slider sits alongside */
+      width: 486px;
+      transform: rotate(90deg);
+      transform-origin: bottom left;
+    }
+    #controls-right input {
+      width: 100%;
+    }
+  </style>
+</head>
 <body>
-  <h1>Live Camera</h1>
-  <img src="/stream" width="648" height="486" />
-  <h2>Controls</h2>
-  <div>
-    Slider 1: <input id="s1" type="range" min="0" max="100" value="50" /> <span id="v1">50</span>
+  <div id="video-container">
+    <img id="stream" src="/stream">
+    <div id="horizontal-overlay"></div>
+    <div id="top-overlay"></div>
+    <div id="bottom-overlay"></div>
+
+    <div id="controls-right">
+      <!-- minY (lower limit) -->
+      <input id="slider-y-min" type="range" min="0" max="243" value="0">
+      <!-- maxY (upper limit) -->
+      <input id="slider-y-max" type="range" min="0" max="243" value="243">
+    </div>
   </div>
-  <div>
-    Slider 2: <input id="s2" type="range" min="0" max="100" value="50" /> <span id="v2">50</span>
+
+  <div id="controls-bottom">
+    <!-- minX (left limit) -->
+    <input id="slider-x-min" type="range" min="0" max="324" value="0">
+    <!-- maxX (right limit) -->
+    <input id="slider-x-max" type="range" min="0" max="324" value="324">
   </div>
-<script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-<script>
-  const socket = io();
-  socket.on('state', data => {
-    ['s1','s2'].forEach((id,i) => {
-      const key = 'slider'+(i+1);
-      document.getElementById(id).value = data[key];
-      document.getElementById('v'+(i+1)).innerText = data[key];
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+
+    // Grab elements
+    const vid = document.getElementById('stream');
+    const sxMin = document.getElementById('slider-x-min');
+    const sxMax = document.getElementById('slider-x-max');
+    const syMin = document.getElementById('slider-y-min');
+    const syMax = document.getElementById('slider-y-max');
+
+    function updateOverlay(e) {
+      // Parse integer values:
+      const xMin = +sxMin.value;
+      const xMax = +sxMax.value;
+      const yMin = +syMin.value;
+      const yMax = +syMax.value;
+
+      // Constrain so min ≤ max:
+      if (xMin > xMax) {
+        if (e.target === sxMax)
+          sxMin.value = xMax;
+        else
+          sxMax.value = xMin;
+      }
+      if (yMin > yMax) {
+        if (e.target === syMax)
+          syMin.value = yMax;
+        else
+          syMax.value = yMin;
+      }
+
+      // Apply to the overlay <div>:
+      document.getElementById('horizontal-overlay').style.left   = xMin * 2 + 'px';
+      document.getElementById('horizontal-overlay').style.width  = (xMax - xMin) * 2 + 'px';
+      document.getElementById('top-overlay').style.height = yMin * 2 + 'px';
+      document.getElementById('bottom-overlay').style.top = yMax * 2 + 'px';
+      document.getElementById('bottom-overlay').style.height = 486 - yMax * 2 + 'px';
+
+      // Send to backend for any further processing
+      socket.emit('update', { xMin, xMax, yMin, yMax });
+    }
+
+    // Wire up live events:
+    [sxMin, sxMax, syMin, syMax].forEach(slider => {
+      slider.addEventListener('input', updateOverlay);
     });
-  });
-  ['s1','s2'].forEach((id,i) => {
-    const key = 'slider'+(i+1);
-    document.getElementById(id).addEventListener('change', e => {
-      const val = e.target.value;
-      document.getElementById('v'+(i+1)).innerText = val;
-      socket.emit('update', {[key]: Number(val)});
-    });
-  });
-</script>
+
+    // Initialize on load:
+    window.addEventListener('load', updateOverlay);
+  </script>
 </body>
 </html>
